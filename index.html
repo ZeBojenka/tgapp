@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Snake Game | Telegram Mini App</title>
+    <style>
+        /* Сброс и базовые стили */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            touch-action: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        /* Шапка игры */
+        .game-header {
+            width: 100%;
+            text-align: center;
+            padding: 10px 0;
+            border-bottom: 2px solid #0f3460;
+        }
+
+        .game-header h1 {
+            font-size: 1.8rem;
+            margin: 5px 0;
+            color: #4ecca3;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .score-board div {
+            background: rgba(15, 52, 96, 0.7);
+            padding: 8px 15px;
+            border-radius: 10px;
+            min-width: 120px;
+        }
+
+        /* Игровые экраны */
+        .game-screen {
+            width: 100%;
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            gap: 25px;
+        }
+
+        #game-container {
+            display: none;
+            position: relative;
+        }
+
+        /* Игровое поле */
+        .grid-container {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1 / 1;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        #game-board {
+            width: 100%;
+            height: 100%;
+            background-color: #16213e;
+            border-radius: 5px;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: repeat(20, 1fr);
+            grid-template-rows: repeat(20, 1fr);
+            gap: 1px;
+            padding: 2px;
+            border: 3px solid #0f3460;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .cell {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+        }
+
+        .snake {
+            background-color: #4ecca3;
+            border-radius: 3px;
+            box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.3);
+        }
+
+        .snake-head {
+            background-color: #3db389;
+            border-radius: 4px;
+        }
+
+        .food {
+            background-color: #e94560;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* Кнопки */
+        button {
+            background: linear-gradient(to bottom, #4ecca3, #3db389);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            min-width: 180px;
+            margin: 5px;
+        }
+
+        button:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(to bottom, #3db389, #2fa078);
+        }
+
+        button:hover {
+            background: linear-gradient(to bottom, #5ed5b3, #4ecca3);
+        }
+
+        .game-buttons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        /* Управление */
+        .controls {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            padding-bottom: 10px;
+        }
+
+        .d-pad {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .d-pad > div {
+            display: flex;
+            gap: 5px;
+        }
+
+        .dir-btn {
+            width: 70px;
+            height: 70px;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8rem;
+            min-width: auto;
+            background: linear-gradient(to bottom, #0f3460, #16213e);
+        }
+
+        .dir-btn:active {
+            background: linear-gradient(to bottom, #16213e, #0f3460);
+        }
+
+        /* Инструкции */
+        .instructions {
+            background: rgba(15, 52, 96, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+            max-width: 400px;
+        }
+
+        .instructions h3 {
+            color: #4ecca3;
+            margin-bottom: 10px;
+        }
+
+        .instructions ul {
+            text-align: left;
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        /* Подвал */
+        footer {
+            text-align: center;
+            padding: 10px;
+            color: #666;
+            font-size: 0.8rem;
+            width: 100%;
+            border-top: 1px solid #0f3460;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 500px) {
+            .score-board {
+                font-size: 1rem;
+            }
+            
+            .score-board div {
+                min-width: 100px;
+                padding: 6px 10px;
+            }
+            
+            button {
+                padding: 12px 25px;
+                font-size: 1rem;
+                min-width: 150px;
+            }
+            
+            .dir-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+            
+            .game-header h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-height: 700px) {
+            .grid-container {
+                max-width: 350px;
+            }
+            
+            button {
+                padding: 10px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="game-header">
+            <div class="score-board">
+                <div>Очки: <span id="score">0</span></div>
+                <div>Рекорд: <span id="high-score">0</span></div>
+            </div>
+            <h1>🐍 Змейка</h1>
+        </header>
+
+        <div class="game-screen">
+            <!-- Экран старта -->
+            <div class="screen" id="start-screen">
+                <button id="start-btn">Начать игру</button>
+                <div class="instructions">
+                    <h3>Как играть:</h3>
+                    <ul>
+                        <li>Управляйте змейкой с помощью кнопок или свайпов</li>
+                        <li>Собирайте красную еду, чтобы увеличить длину змейки</li>
+                        <li>Избегайте столкновений со стенами и с собой</li>
+                        <li>Используйте клавиши WASD или стрелки для управления на ПК</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Экран игры -->
+            <div class="screen" id="game-container" style="display: none;">
+                <div class="grid-container">
+                    <div id="game-board"></div>
+                </div>
+                <div id="pause-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; flex-direction: column; gap: 20px; z-index: 10;">
+                    <h2 style="color: #4ecca3; font-size: 2rem;">ПАУЗА</h2>
+                    <button id="resume-btn">Продолжить</button>
+                </div>
+            </div>
+            
+            <!-- Экран завершения -->
+            <div class="screen" id="game-over-screen" style="display: none;">
+                <h2 style="color: #e94560; font-size: 2rem;">Игра окончена!</h2>
+                <p style="font-size: 1.3rem;">Ваш счет: <span id="final-score">0</span></p>
+                <button id="restart-btn">Играть снова</button>
+                <button id="menu-btn">В меню</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="game-buttons">
+                <button id="pause-btn">Пауза</button>
+                <button id="restart-game-btn">Рестарт</button>
+            </div>
+            
+            <div class="d-pad">
+                <button class="dir-btn" data-direction="up">↑</button>
+                <div>
+                    <button class="dir-btn" data-direction="left">←</button>
+                    <button class="dir-btn" data-direction="down">↓</button>
+                    <button class="dir-btn" data-direction="right">→</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <small>Создано для Telegram Mini App</small>
+            <!-- Место для интеграции с Telegram Web App API -->
+            <!-- 
+            <script>
+                Telegram.WebApp.ready();
+                // Пример использования Telegram Web App API
+                // const tg = window.Telegram.WebApp;
+                // tg.expand(); // Развернуть приложение на весь экран
+                // tg.MainButton.setText("Сохранение").show().onClick(saveGame);
+            </script>
+            -->
+        </footer>
+    </div>
+
+    <script>
+        // ==================== КОНСТАНТЫ И НАСТРОЙКИ ====================
+        const GRID_SIZE = 20; // Размер игрового поля 20x20
+        const INITIAL_SNAKE_LENGTH = 3; // Начальная длина змейки
+        const INITIAL_SPEED = 150; // Начальная скорость (мс на ход)
+        const SPEED_INCREMENT = 2; // Увеличение скорости с каждым уровнем
+        
+        // Цвета
+        const COLORS = {
+            background: '#16213e',
+            snake: '#4ecca3',
+            snakeHead: '#3db389',
+            food: '#e94560',
+            grid: 'rgba(255, 255, 255, 0.05)'
+        };
+        
+        // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
+        let gameBoard;
+        let scoreElement;
+        let highScoreElement;
+        let finalScoreElement;
+        
+        let snake = [];
+        let food = {};
+        let direction = 'right';
+        let nextDirection = 'right';
+        let gameInterval;
+        let score = 0;
+        let highScore = 0;
+        let gameSpeed = INITIAL_SPEED;
+        let isPaused = false;
+        let gameRunning = false;
+        
+        // Для обработки свайпов
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        // ==================== ИНИЦИАЛИЗАЦИЯ ИГРЫ ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Получаем элементы DOM
+            gameBoard = document.getElementById('game-board');
+            scoreElement = document.getElementById('score');
+            highScoreElement = document.getElementById('high-score');
+            finalScoreElement = document.getElementById('final-score');
+            
+            // Загружаем рекорд из localStorage
+            highScore = parseInt(localStorage.getItem('snakeHighScore')) || 0;
+            highScoreElement.textContent = highScore;
+            
+            // Инициализируем игровое поле
+            createGrid();
+            
+            // Настраиваем обработчики событий
+            setupEventListeners();
+            
+            // Показываем стартовый экран
+            showScreen('start');
+        });
+        
+        // Создание игрового поля
+        function createGrid() {
+            gameBoard.innerHTML = '';
+            
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    gameBoard.appendChild(cell);
+                }
+            }
+        }
+        
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            // Кнопки управления игрой
+            document.getElementById('start-btn').addEventListener('click', startGame);
+            document.getElementById('restart-btn').addEventListener('click', startGame);
+            document.getElementById('restart-game-btn').addEventListener('click', restartGame);
+            document.getElementById('pause-btn').addEventListener('click', togglePause);
+            document.getElementById('resume-btn').addEventListener('click', togglePause);
+            document.getElementById('menu-btn').addEventListener('click', () => showScreen('start'));
+            
+            // Кнопки направления
+            document.querySelectorAll('.dir-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const dir = btn.dataset.direction;
+                    changeDirection(dir);
+                });
+            });
+            
+            // Управление с клавиатуры
+            document.addEventListener('keydown', handleKeyDown);
+            
+            // Управление касаниями (свайпы)
+            document.addEventListener('touchstart', handleTouchStart);
+            document.addEventListener('touchmove', handleTouchMove);
+            
+            // Предотвращение скролла при касании
+            document.addEventListener('touchmove', (e) => {
+                if (gameRunning) e.preventDefault();
+            }, { passive: false });
+        }
+        
+        // ==================== УПРАВЛЕНИЕ ====================
+        // Обработка нажатий клавиш
+        function handleKeyDown(event) {
+            if (!gameRunning) return;
+            
+            switch(event.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    event.preventDefault();
+                    changeDirection('up');
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    event.preventDefault();
+                    changeDirection('down');
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    event.preventDefault();
+                    changeDirection('left');
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    event.preventDefault();
+                    changeDirection('right');
+                    break;
+                case ' ':
+                case 'Escape':
+                    event.preventDefault();
+                    togglePause();
+                    break;
+            }
+        }
+        
+        // Обработка начала касания
+        function handleTouchStart(event) {
+            if (!gameRunning) return;
+            
+            touchStartX = event.touches[0].clientX;
+            touchStartY = event.touches[0].clientY;
+            event.preventDefault();
+        }
+        
+        // Обработка движения касания (свайпы)
+        function handleTouchMove(event) {
+            if (!gameRunning || !touchStartX || !touchStartY) return;
+            
+            event.preventDefault();
+            
+            const touchEndX = event.touches[0].clientX;
+            const touchEndY = event.touches[0].clientY;
+            
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+            
+            // Определяем направление свайпа
+            if (Math.abs(dx) > Math.abs(dy)) {
+                // Горизонтальный свайп
+                if (dx > 30) changeDirection('right');
+                else if (dx < -30) changeDirection('left');
+            } else {
+                // Вертикальный свайп
+                if (dy > 30) changeDirection('down');
+                else if (dy < -30) changeDirection('up');
+            }
+            
+            // Сбрасываем начальные координаты
+            touchStartX = 0;
+            touchStartY = 0;
+        }
+        
+        // Изменение направления движения
+        function changeDirection(newDirection) {
+            // Запрещаем разворот на 180 градусов
+            if (
+                (newDirection === 'up' && direction !== 'down') ||
+                (newDirection === 'down' && direction !== 'up') ||
+                (newDirection === 'left' && direction !== 'right') ||
+                (newDirection === 'right' && direction !== 'left')
+            ) {
+                nextDirection = newDirection;
+            }
+        }
+        
+        // ==================== ИГРОВАЯ ЛОГИКА ====================
+        // Начало игры
+        function startGame() {
+            // Сброс состояния игры
+            resetGame();
+            
+            // Инициализация змейки
+            snake = [];
+            for (let i = INITIAL_SNAKE_LENGTH - 1; i >= 0; i--) {
+                snake.push({ x: i, y: Math.floor(GRID_SIZE / 2) });
+            }
+            
+            // Генерация первой еды
+            generateFood();
+            
+            // Сброс направления
+            direction = 'right';
+            nextDirection = 'right';
+            
+            // Обновление интерфейса
+            scoreElement.textContent = score;
+            
+            // Показ игрового экрана
+            showScreen('game');
+            
+            // Запуск игрового цикла
+            gameRunning = true;
+            isPaused = false;
+            document.getElementById('pause-overlay').style.display = 'none';
+            clearInterval(gameInterval);
+            gameInterval = setInterval(gameLoop, gameSpeed);
+        }
+        
+        // Перезапуск игры
+        function restartGame() {
+            if (confirm("Перезапустить игру? Текущий прогресс будет потерян.")) {
+                startGame();
+            }
+        }
+        
+        // Пауза/продолжение игры
+        function togglePause() {
+            if (!gameRunning) return;
+            
+            isPaused = !isPaused;
+            
+            if (isPaused) {
+                clearInterval(gameInterval);
+                document.getElementById('pause-overlay').style.display = 'flex';
+            } else {
+                document.getElementById('pause-overlay').style.display = 'none';
+                gameInterval = setInterval(gameLoop, gameSpeed);
+            }
+        }
+        
+        // Сброс игры
+        function resetGame() {
+            score = 0;
+            gameSpeed = INITIAL_SPEED;
+            snake = [];
+            direction = 'right';
+            nextDirection = 'right';
+            clearInterval(gameInterval);
+            updateScoreDisplay();
+        }
+        
+        // Основной игровой цикл
+        function gameLoop() {
+            if (isPaused) return;
+            
+            // Обновление направления
+            direction = nextDirection;
+            
+            // Движение змейки
+            moveSnake();
+            
+            // Проверка столкновений
+            if (checkCollision()) {
+                gameOver();
+                return;
+            }
+            
+            // Проверка поедания еды
+            if (checkFoodCollision()) {
+                eatFood();
+            }
+            
+            // Отрисовка игры
+            draw();
+        }
+        
+        // Движение змейки
+        function moveSnake() {
+            // Создаем новую голову на основе текущего направления
+            const head = { ...snake[0] };
+            
+            switch (direction) {
+                case 'up': head.y--; break;
+                case 'down': head.y++; break;
+                case 'left': head.x--; break;
+                case 'right': head.x++; break;
+            }
+            
+            // Добавляем новую голову в начало массива
+            snake.unshift(head);
+            
+            // Удаляем хвост, если не съели еду
+            // (это делается в функции eatFood при поедании еды)
+            if (!checkFoodCollision()) {
+                snake.pop();
+            }
+        }
+        
+        // Проверка столкновений
+        function checkCollision() {
+            const head = snake[0];
+            
+            // Столкновение со стенами
+            if (
+                head.x < 0 || head.x >= GRID_SIZE ||
+                head.y < 0 || head.y >= GRID_SIZE
+            ) {
+                return true;
+            }
+            
+            // Столкновение с собой (пропускаем голову)
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        // Проверка столкновения с едой
+        function checkFoodCollision() {
+            const head = snake[0];
+            return head.x === food.x && head.y === food.y;
+        }
+        
+        // Обработка поедания еды
+        function eatFood() {
+            // Увеличиваем счет
+            score += 10;
+            
+            // Увеличиваем скорость каждые 50 очков
+            if (score % 50 === 0) {
+                gameSpeed = Math.max(50, gameSpeed - SPEED_INCREMENT);
+                clearInterval(gameInterval);
+                gameInterval = setInterval(gameLoop, gameSpeed);
+            }
+            
+            // Обновление отображения счета
+            updateScoreDisplay();
+            
+            // Генерация новой еды
+            generateFood();
+        }
+        
+        // Генерация еды
+        function generateFood() {
+            let newFood;
+            let foodOnSnake;
+            
+            do {
+                foodOnSnake = false;
+                newFood = {
+                    x: Math.floor(Math.random() * GRID_SIZE),
+                    y: Math.floor(Math.random() * GRID_SIZE)
+                };
+                
+                // Проверяем, что еда не появляется на змейке
+                for (const segment of snake) {
+                    if (segment.x === newFood.x && segment.y === newFood.y) {
+                        foodOnSnake = true;
+                        break;
+                    }
+                }
+            } while (foodOnSnake);
+            
+            food = newFood;
+        }
+        
+        // Отрисовка игры
+        function draw() {
+            // Очищаем поле
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.className = 'cell';
+            });
+            
+            // Отрисовываем змейку
+            snake.forEach((segment, index) => {
+                const cell = document.querySelector(
+                    `.cell[data-row="${segment.y}"][data-col="${segment.x}"]`
+                );
+                
+                if (cell) {
+                    cell.classList.add('snake');
+                    if (index === 0) {
+                        cell.classList.add('snake-head');
+                    }
+                }
+            });
+            
+            // Отрисовываем еду
+            const foodCell = document.querySelector(
+                `.cell[data-row="${food.y}"][data-col="${food.x}"]`
+            );
+            
+            if (foodCell) {
+                foodCell.classList.add('food');
+            }
+        }
+        
+        // Конец игры
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(gameInterval);
+            
+            // Обновление рекорда
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('snakeHighScore', highScore);
+                highScoreElement.textContent = highScore;
+            }
+            
+            // Показ экрана завершения
+            finalScoreElement.textContent = score;
+            showScreen('game-over');
+        }
+        
+        // Обновление отображения счета
+        function updateScoreDisplay() {
+            scoreElement.textContent = score;
+            highScoreElement.textContent = highScore;
+        }
+        
+        // Переключение экранов
+        function showScreen(screenName) {
+            // Скрываем все экраны
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-container').style.display = 'none';
+            document.getElementById('game-over-screen').style.display = 'none';
+            
+            // Показываем нужный экран
+            switch(screenName) {
+                case 'start':
+                    document.getElementById('start-screen').style.display = 'flex';
+                    break;
+                case 'game':
+                    document.getElementById('game-container').style.display = 'flex';
+                    break;
+                case 'game-over':
+                    document.getElementById('game-over-screen').style.display = 'flex';
+                    break;
+            }
+        }
+        
+        // Инициализация при загрузке
+        window.addEventListener('load', () => {
+            // Для отладки: автоматический старт игры при загрузке (закомментировать для продакшн)
+            // startGame();
+        });
+    </script>
+</body>
+</html>
